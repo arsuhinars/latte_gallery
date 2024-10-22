@@ -1,0 +1,497 @@
+openapi: "3.0.0"
+
+
+info:
+  title: LatteGallery
+  version: "0.1.0"
+  description: >
+    Сервис поиска, сохранения и организации изображений по интересам, с 
+    возможностью создания коллекций и вдохновения для творчества
+
+
+servers:
+  - url: http://localhost:8080
+    description: Локальный сервер
+
+
+tags:
+  - name: Статус
+  - name: Аккаунты
+  - name: Картинки
+  - name: Файлы
+
+
+paths:
+  /status:
+    get:
+      tags: [ Статус ]
+      summary: Получить статус сервера
+      operationId: get_status
+      responses:
+        "200":
+          description: Сервер находится в работоспособном состоянии
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ status ]
+                properties:
+                  status: { type: string, enum: [ok] }
+        "400": { $ref: "#/components/responses/invalid_format" }
+        "401": { $ref: "#/components/responses/invalid_credentials" }
+  
+  /accounts/register:
+    post:
+      tags: [ Аккаунты ]
+      summary: Регистрация нового аккаунта
+      description: >
+        Аккаунты должны иметь уникальные `login`. Регистрация возможно только
+        неавторизованным пользователем. По умолчанию аккаунты регистрируются
+        с ролью `USER`.
+      operationId: register_account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/account_register" }
+      responses:
+        "201":
+          description: Аккаунт был успешно зарегистрирован
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/account" }
+        "400": { $ref: "#/components/responses/invalid_format" }
+        "401": { $ref: "#/components/responses/invalid_credentials" }
+        "403": { $ref: "#/components/responses/forbidden_not_anonymous" }
+        "409":
+          description: Аккаунт с указанным `login` уже существует
+  /accounts/my:
+    get:
+      tags: [ Аккаунты ]
+      summary: Получение данных своего аккаунта
+      operationId: get_my_account
+      responses:
+        "200":
+          description: Запрос был успешно выполнен
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/account" }
+        "400": { $ref: "#/components/responses/invalid_format" }
+        "401": { $ref: "#/components/responses/invalid_credentials" }
+        "403": { $ref: "#/components/responses/forbidden_not_authorized" }
+    put:
+      tags: [ Аккаунты ]
+      summary: Обновление данных своего аккаунта
+      operationId: update_my_account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/my_account_update" }
+      responses:
+        "200":
+          description: Аккаунт был успешно обновлен
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/account" }
+        "400": { $ref: "#/components/responses/invalid_format" }
+        "401": { $ref: "#/components/responses/invalid_credentials" }
+        "403": { $ref: "#/components/responses/forbidden_not_authorized" }
+        "409":
+          description: Аккаунт с указанным `login` уже существует
+  /accounts/my/password:
+    put:
+      tags: [ Аккаунты ]
+      summary: Обновить пароль своего аккаунта
+      operationId: update_my_account_password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/account_password_update" }
+      responses:
+        "200":
+          description: Пароль аккаунта был успешно обновлен
+        "400": { $ref: "#/components/responses/invalid_format" }
+        "401": { $ref: "#/components/responses/invalid_credentials" }
+        "403": { $ref: "#/components/responses/forbidden_not_authorized" }
+  /accounts:
+    post:
+      tags: [ Аккаунты ]
+      summary: Создать новый аккаунт
+      operationId: create_account
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/account_create" }
+      responses:
+        "201":
+          description: Аккаунт был успешно создан
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/account" }
+        "400": { $ref: "#/components/responses/invalid_format" }
+        "401": { $ref: "#/components/responses/invalid_credentials" }
+        "403":
+          description: |
+            1. Пользователь не является администратором (роль не равна `ADMIN`, `MAIN_ADMIN`)
+            2. Если администратор (роль `ADMIN`) пытается выдать роль `ADMIN` или `MAIN_ADMIN`
+            3. Если главный администратор (роль `MAIN_ADMIN`) пытается выдать роль `MAIN_ADMIN`
+        "409":
+          description: Аккаунт с указанным `login` уже существует
+    get:
+      tags: [ Аккаунты ]
+      summary: Получить список всех аккаунтов
+      description: >
+        Сортировка должна быть по полю `id` в возрастающем порядке.
+      operationId: get_all_accounts
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/size"
+      responses:
+        "200":
+          description: Запрос был успешно выполнен
+          content:
+            application/json:
+              schema:
+                title: Page[AccountSchema]
+                required: [ count, items ]
+                properties:
+                  count: { type: integer, example: 1 }
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/account" }
+        "400": { $ref: "#/components/responses/invalid_format" }
+        "401": { $ref: "#/components/responses/invalid_credentials" }
+        "403": { $ref: "#/components/responses/forbidden_not_admin" }
+  /accounts/{id}:
+    get:
+      tags: [ Аккаунты ]
+      summary: Получить аккаунт по идентификатору
+      operationId: get_account_by_id
+      parameters:
+        - $ref: "#/components/parameters/id"
+      responses:
+        "200":
+          description: Аккаунт был успешно найден
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/account" }
+        "400": { $ref: "#/components/responses/invalid_format" }
+        "401": { $ref: "#/components/responses/invalid_credentials" }
+        "403": { $ref: "#/components/responses/forbidden_not_admin" }
+        "404":
+          description: Аккаунт с данным идентификатором не был найден
+    put:
+      tags: [ Аккаунты ]
+      summary: Обновить аккаунт по идентификатору
+      operationId: update_account_by_id
+      parameters:
+        - $ref: "#/components/parameters/id"
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/account_update" }
+      responses:
+        "200":
+          description: Аккаунт был успешно обновлен
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/account" }
+        "400": { $ref: "#/components/responses/invalid_format" }
+        "401": { $ref: "#/components/responses/invalid_credentials" }
+        "403":
+          description: |
+            1. Пользователь не является администратором (роль не равна `ADMIN`, `MAIN_ADMIN`)
+            2. Если администратор (роль `ADMIN`) пытается выдать роль `ADMIN` или `MAIN_ADMIN`
+            3. Если главный администратор (роль `MAIN_ADMIN`) пытается выдать роль `MAIN_ADMIN`
+        "404":
+          description: Аккаунт с данным идентификатором не был найден
+        "409":
+          description: Аккаунт с указанным `login` уже существует
+
+  /pictures:
+    post:
+      tags: [ Картинки ]
+      summary: Создать новую картинку
+      description: >
+        Перед созданием картинки необходимо загрузить файл с изображением на
+        сервер через метод `POST /files`. Полученный UUID передать в тело запроса
+        в поле `file_uuid`.
+      operationId: create_picture
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/picture_create" }
+      responses:
+        "201":
+          description: Картинка была успешно создана
+        "400": { $ref: "#/components/responses/invalid_format" }
+        "401": { $ref: "#/components/responses/invalid_credentials" }
+        "403": { $ref: "#/components/responses/forbidden_not_authorized" }
+    get:
+      tags: [ Картинки ]
+      summary: Получить список всех картинок
+      description: |
+        Сортировка должна быть по полю `creation_date_time` в убывающем порядке
+        (сначала новые).
+
+        Данный метод всегда возвращает только публичные картинки
+        (`is_private` равен `false`).
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/size"
+        - name: title
+          in: query
+          description: >
+            Поиск по параметру `title` идет по вхождению указанной подстроки в поле
+            `title` картинки.
+          required: false
+          schema: { type: string, minLength: 1 }
+        - name: owner_id
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1 }
+        - name: tags
+          in: query
+          description: >
+            Если `tags` пустой, то он не учитывается в фильтрации. Иначе возвращаются
+            все картинки, которые содержат хотя бы один из тегов в указанном
+            списке.
+          required: false
+          schema:
+            type: array
+            items: { type: string, minLength: 1 }
+      responses:
+        "200":
+          description: Запрос был успешно выполнен
+          content:
+            application/json:
+              schema:
+                title: Page[PictureSchema]
+                required: [ count, items ]
+                properties:
+                  count: { type: integer, example: 1 }
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/picture" }
+        "400": { $ref: "#/components/responses/invalid_format" }
+        "401": { $ref: "#/components/responses/invalid_credentials" }
+  /pictures/my:
+    get:
+      tags: [ Картинки ]
+      summary: Получить список своих картинок
+  /pictures/{id}:
+    get:
+      tags: [ Картинки ]
+      summary: Получить картинку по идентификатору
+    put:
+      tags: [ Картинки ]
+      summary: Обновить картинку по идентификатору
+
+  /files:
+    post:
+      tags: [ Файлы ]
+      summary: Загрузить файл на сервер
+      description: |
+        В качестве идентификатора файла используется [UUID](https://ru.wikipedia.org/wiki/UUID),
+        который генерируется случайно для каждого файла.
+
+        __Важно!__ При загрузке файла должен также сохраняться MIME тип
+        (см. заголовок Content-Type). При скачивании этого файла через
+        метод `GET /files/{uuid}` должен указываться этот же тип.
+      operationId: upload_file
+      requestBody:
+        required: true
+        content:
+          image/jpeg:
+            schema:
+              type: string
+              format: binary
+          image/png:
+            schema:
+              type: string
+              format: binary
+          image/gif:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "201":
+          description: Файл был успешно загружен
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/file" }
+        "400": { $ref: "#/components/responses/invalid_format" }
+        "401": { $ref: "#/components/responses/invalid_credentials" }
+        "403": { $ref: "#/components/responses/forbidden_not_authorized" }
+  /files/{uuid}:
+    get:
+      tags: [ Файлы ]
+      summary: Скачать содержимое файла
+      operationId: download_file
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { $ref: "#/components/schemas/uuid" }
+      responses:
+        "200":
+          description: Запрос был успешно выполнен
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/gif:
+              schema:
+                type: string
+                format: binary
+        "400": { $ref: "#/components/responses/invalid_format" }
+        "401": { $ref: "#/components/responses/invalid_credentials" }
+
+
+components:
+  schemas:
+    uuid:
+      title: UUID
+      type: string
+      pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+      example: 9affceb3-d9ef-4a2f-9ec2-0932c56b8648
+    account_role:
+      title: AccountRole
+      type: string
+      enum: [ USER, ADMIN, MAIN_ADMIN ]
+    account:
+      title: AccountSchema
+      type: object
+      required: [ id, login, name, role ]
+      properties:
+        id: { type: integer, example: 1 }
+        login: { type: string, example: user1 }
+        name: { type: string, example: Василий Пупкин }
+        role: { $ref: "#/components/schemas/account_role" }
+    account_register:
+      title: AccountRegisterSchema
+      type: object
+      required: [ login, password, name ]
+      properties:
+        login: { type: string, minLength: 1, example: user1 }
+        password: { type: string, minLength: 8, example: qwerty12 }
+        name: { type: string, minLength: 1, example: Василий Пупкин }
+    account_create:
+      title: AccountCreateSchema
+      type: object
+      required: [ login, password, name, role ]
+      properties:
+        login: { type: string, minLength: 1, example: user1 }
+        password: { type: string, minLength: 8, example: qwerty12 }
+        name: { type: string, minLength: 1, example: Василий Пупкин }
+        role: { $ref: "#/components/schemas/account_role" }
+    my_account_update:
+      title: MyAccountUpdateSchema
+      type: object
+      required: [ login, name ]
+      properties:
+        login: { type: string, minLength: 1, example: user1 }
+        name: { type: string, minLength: 1, example: Василий Пупкин }
+    account_update:
+      title: AccountUpdateSchema
+      type: object
+      required: [ login, name, role ]
+      properties:
+        login: { type: string, minLength: 1, example: user1 }
+        name: { type: string, minLength: 1, example: Василий Пупкин }
+        role: { $ref: "#/components/schemas/account_role" }
+    account_password_update:
+      title: AccountPasswordUpdateSchema
+      type: object
+      required: [ password ]
+      properties:
+        password: { type: string, minLength: 8, example: qwerty12 }
+    picture:
+      title: PictureSchema
+      type: object
+      required: [ id, title, creation_date_time, tags, is_private, owner_id, file_uuid ]
+      properties:
+        id: { type: integer, example: 1 }
+        title: { type: string, example: Котик }
+        creation_date_time: { type: string, format: date-time }
+        tags:
+          type: array
+          items: { type: string }
+          example: [ cats, adorable, cute ]
+        is_private: { type: boolean, example: false }
+        owner_id: { type: integer, example: 1 }
+        file_uuid: { $ref: "#/components/schemas/uuid" }
+    picture_create:
+      title: PictureCreateSchema
+      type: object
+      required: [ title, tags, is_private, file_uuid ]
+      properties:
+        title: { type: string, minLength: 1, example: Котик }
+        tags:
+          type: array
+          items: { type: string, minLength: 1 }
+          example: [ cats, adorable, cute ]
+        is_private: { type: boolean, example: false }
+        file_uuid: { $ref: "#/components/schemas/uuid" }
+    picture_update:
+      title: PictureUpdateSchema
+      type: object
+      required: [ title, tags, is_private ]
+      properties:
+        title: { type: string, minLength: 1, example: Котик }
+        tags:
+          type: array
+          items: { type: string, minLength: 1 }
+          example: [ cats, adorable, cute ]
+        is_private: { type: boolean, example: false }
+    file:
+      title: FileSchema
+      type: object
+      required: [ uuid ]
+      properties:
+        uuid: { $ref: "#/components/schemas/uuid" }
+
+  parameters:
+    id:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+    page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 0, default: 0 }
+    size:
+      name: size
+      in: query
+      schema: { type: integer, minimum: 1, default: 10 }
+
+  responses:
+    invalid_format:
+      description: Невалидные входные данные
+    invalid_credentials:
+      description: Переданы невалидные учетные данные
+    forbidden_not_anonymous:
+      description: Пользователь авторизован в системе
+    forbidden_not_authorized:
+      description: Пользователь не авторизован в системе
+    forbidden_not_admin:
+      description: Пользователь не является администратором (роль не равна `ADMIN`, `MAIN_ADMIN`)
+
+  securitySchemes:
+    basic_auth:
+      type: http
+      scheme: Basic
+      description: >
+        Базовая HTTP авторизация. Для авторизации необходимо передать в заголовок
+        `Authorization` значение `Basic`, после которого через пробел
+        передать строку, закодированную в base64, состоящую из логина и пароля,
+        разделенных двоеточием.
