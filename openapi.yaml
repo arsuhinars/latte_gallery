@@ -153,14 +153,7 @@ paths:
           description: Запрос был успешно выполнен
           content:
             application/json:
-              schema:
-                title: Page[AccountSchema]
-                required: [ count, items ]
-                properties:
-                  count: { type: integer, example: 1 }
-                  items:
-                    type: array
-                    items: { $ref: "#/components/schemas/account" }
+              schema: { $ref: "#/components/schemas/page_account" }
         "400": { $ref: "#/components/responses/invalid_format" }
         "401": { $ref: "#/components/responses/invalid_credentials" }
         "403": { $ref: "#/components/responses/forbidden_not_admin" }
@@ -239,57 +232,114 @@ paths:
 
         Данный метод всегда возвращает только публичные картинки
         (`is_private` равен `false`).
+      operationId: get_all_pictures
       parameters:
         - $ref: "#/components/parameters/page"
         - $ref: "#/components/parameters/size"
-        - name: title
-          in: query
-          description: >
-            Поиск по параметру `title` идет по вхождению указанной подстроки в поле
-            `title` картинки.
-          required: false
-          schema: { type: string, minLength: 1 }
-        - name: owner_id
-          in: query
-          required: false
-          schema: { type: integer, minimum: 1 }
-        - name: tags
-          in: query
-          description: >
-            Если `tags` пустой, то он не учитывается в фильтрации. Иначе возвращаются
-            все картинки, которые содержат хотя бы один из тегов в указанном
-            списке.
-          required: false
-          schema:
-            type: array
-            items: { type: string, minLength: 1 }
+        - $ref: "#/components/parameters/picture_title"
+        - $ref: "#/components/parameters/picture_owner_id"
+        - $ref: "#/components/parameters/picture_tags"
       responses:
         "200":
           description: Запрос был успешно выполнен
           content:
             application/json:
-              schema:
-                title: Page[PictureSchema]
-                required: [ count, items ]
-                properties:
-                  count: { type: integer, example: 1 }
-                  items:
-                    type: array
-                    items: { $ref: "#/components/schemas/picture" }
+              schema: { $ref: "#/components/schemas/page_picture" }
         "400": { $ref: "#/components/responses/invalid_format" }
         "401": { $ref: "#/components/responses/invalid_credentials" }
   /pictures/my:
     get:
       tags: [ Картинки ]
       summary: Получить список своих картинок
+      description: |
+        Сортировка должна быть по полю `creation_date_time` в убывающем порядке
+        (сначала новые).
+      operationId: get_my_pictures
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/size"
+        - $ref: "#/components/parameters/picture_title"
+        - $ref: "#/components/parameters/picture_private"
+        - $ref: "#/components/parameters/picture_tags"
+      responses:
+        "200":
+          description: Запрос был успешно выполнен
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/page_picture" }
+        "400": { $ref: "#/components/responses/invalid_format" }
+        "401": { $ref: "#/components/responses/invalid_credentials" }
+        "403": { $ref: "#/components/responses/forbidden_not_authorized" }
   /pictures/{id}:
     get:
       tags: [ Картинки ]
       summary: Получить картинку по идентификатору
+      operationId: get_picture_by_id
+      parameters:
+        - $ref: "#/components/parameters/id"
+      responses:
+        "200":
+          description: Запрос был успешно выполнен
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/picture" }
+        "400": { $ref: "#/components/responses/invalid_format" }
+        "401": { $ref: "#/components/responses/invalid_credentials" }
+        "403":
+          description: >
+            Попытка получить приватную картинку, когда текущий пользователь
+            не авторизован или не является её владельцем
+        "404":
+          description: Картинка с данным идентификатором не была найдена
     put:
       tags: [ Картинки ]
       summary: Обновить картинку по идентификатору
-
+      operationId: update_picture_by_id
+      parameters:
+        - $ref: "#/components/parameters/id"
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/picture_update" }
+      responses:
+        "200":
+          description: Запрос был успешно выполнен
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/picture" }
+        "400": { $ref: "#/components/responses/invalid_format" }
+        "401": { $ref: "#/components/responses/invalid_credentials" }
+        "403":
+          description: >
+            Пользователь не является администратором и не является владельцем
+            этой картинки
+        "404":
+          description: Картинка с данным идентификатором не была найдена
+  /users/{user_id}/pictures:
+    get:
+      tags: [ Картинки ]
+      summary: Получить картинки пользователя
+      description: |
+        Сортировка должна быть по полю `creation_date_time` в убывающем порядке
+        (сначала новые).
+      operationId: get_user_pictures
+      parameters:
+        - $ref: "#/components/parameters/user_id"
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/size"
+        - $ref: "#/components/parameters/picture_title"
+        - $ref: "#/components/parameters/picture_private"
+        - $ref: "#/components/parameters/picture_tags"
+      responses:
+        "200":
+          description: Запрос был успешно выполнен
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/page_picture" }
+        "400": { $ref: "#/components/responses/invalid_format" }
+        "401": { $ref: "#/components/responses/invalid_credentials" }
+        "403": { $ref: "#/components/responses/forbidden_not_admin" }
+        
   /files:
     post:
       tags: [ Файлы ]
@@ -414,6 +464,14 @@ components:
       required: [ password ]
       properties:
         password: { type: string, minLength: 8, example: qwerty12 }
+    page_account:
+      title: Page[AccountSchema]
+      required: [ count, items ]
+      properties:
+        count: { type: integer, example: 1 }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/account" }
     picture:
       title: PictureSchema
       type: object
@@ -452,6 +510,14 @@ components:
           items: { type: string, minLength: 1 }
           example: [ cats, adorable, cute ]
         is_private: { type: boolean, example: false }
+    page_picture:
+      title: Page[PictureSchema]
+      required: [ count, items ]
+      properties:
+        count: { type: integer, example: 1 }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/picture" }
     file:
       title: FileSchema
       type: object
@@ -465,6 +531,11 @@ components:
       in: path
       required: true
       schema: { type: integer, minimum: 1 }
+    user_id:
+      name: user_id
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
     page:
       name: page
       in: query
@@ -473,6 +544,38 @@ components:
       name: size
       in: query
       schema: { type: integer, minimum: 1, default: 10 }
+    picture_title:
+      name: title
+      in: query
+      description: >
+        Поиск по параметру `title` идет по вхождению указанной подстроки в поле
+        `title` картинки без учета регистра.
+      required: false
+      schema: { type: string, minLength: 1 }
+    picture_owner_id:
+      name: owner_id
+      in: query
+      required: false
+      schema: { type: integer, minimum: 1 }
+    picture_private:
+      name: private
+      in: query
+      description: >
+        Если `private` не указан, то он не учитывается в фильтрации. Иначе возвращаются
+        все с соответствующим значением `is_private`.
+      required: false
+      schema: { type: boolean }
+    picture_tags:
+      name: tags
+      in: query
+      description: >
+        Если `tags` пустой, то он не учитывается в фильтрации. Иначе возвращаются
+        все картинки, которые содержат хотя бы один из тегов в указанном
+        списке.
+      required: false
+      schema:
+        type: array
+        items: { type: string, minLength: 1 }
 
   responses:
     invalid_format:

@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from latte_gallery.routers import accounts_router, status_router
+from latte_gallery.accounts.routers import accounts_router
+from latte_gallery.core.routers import status_router
 
 
 def create_app():
