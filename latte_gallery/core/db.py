@@ -13,6 +13,8 @@ class DatabaseManager:
         self._db_url = db_url
 
     async def initialize(self):
+        from latte_gallery.accounts.models import Account  # noqa: F401
+
         self._engine = create_async_engine(self._db_url)
         self._session_maker = async_sessionmaker(self._engine)
         async with self._engine.connect() as connect:

@@ -1,13 +1,8 @@
-from enum import StrEnum
 from typing import Annotated
 
 from pydantic import BaseModel, StringConstraints
 
-
-class Role(StrEnum):
-    USER = "USER"
-    ADMIN = "ADMIN"
-    MAIN_ADMIN = "MAIN_ADMIN"
+from latte_gallery.accounts.models import Role
 
 
 class AccountSchema(BaseModel):
