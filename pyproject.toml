@@ -5,7 +5,7 @@ description = ""
 authors = ["arsuhinars <arsuhinars@gmail.com>"]
 readme = "README.md"
 
-[mypy]
+[tool.mypy]
 plugins = "pydantic.mypy"
 
 [tool.poetry.dependencies]
