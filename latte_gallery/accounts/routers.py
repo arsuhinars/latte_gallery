@@ -1,4 +1,6 @@
-from fastapi import APIRouter, status
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, status
 from pydantic import PositiveInt
 
 from latte_gallery.accounts.schemas import (
@@ -10,6 +12,7 @@ from latte_gallery.accounts.schemas import (
     Role,
 )
 from latte_gallery.core.schemas import Page, PageNumber, PageSize
+from latte_gallery.security.dependencies import authorize_user
 
 accounts_router = APIRouter(prefix="/accounts", tags=["Аккаунты"])
 
@@ -41,13 +44,10 @@ async def create_account(body: AccountCreateSchema) -> AccountSchema:
 
 
 @accounts_router.get("/my", summary="Получение данных своего аккаунта")
-async def get_my_account() -> AccountSchema:
-    return AccountSchema(
-        id=1,
-        login="user1",
-        name="Вася Пупкин",
-        role=Role.USER,
-    )
+async def get_my_account(
+    user: Annotated[AccountSchema, Depends(authorize_user)],
+) -> AccountSchema:
+    return user
 
 
 @accounts_router.get("/{id}", summary="Получение аккаунт по идентификатору")
