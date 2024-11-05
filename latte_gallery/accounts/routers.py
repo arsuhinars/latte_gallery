@@ -1,6 +1,4 @@
-from typing import Annotated
-
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, status
 from pydantic import PositiveInt
 
 from latte_gallery.accounts.schemas import (
@@ -11,8 +9,9 @@ from latte_gallery.accounts.schemas import (
     AccountUpdateSchema,
     Role,
 )
+from latte_gallery.core.dependencies import AccountServiceDep, SessionDep
 from latte_gallery.core.schemas import Page, PageNumber, PageSize
-from latte_gallery.security.dependencies import authorize_user
+from latte_gallery.security.dependencies import AuthorizedUser
 
 accounts_router = APIRouter(prefix="/accounts", tags=["Аккаунты"])
 
@@ -22,13 +21,17 @@ accounts_router = APIRouter(prefix="/accounts", tags=["Аккаунты"])
     summary="Регистрация нового аккаунта",
     status_code=status.HTTP_201_CREATED,
 )
-async def register_account(body: AccountRegisterSchema) -> AccountSchema:
-    return AccountSchema(
-        id=1,
-        login=body.login,
-        name=body.name,
-        role=Role.USER,
+async def register_account(
+    body: AccountRegisterSchema, account_service: AccountServiceDep, session: SessionDep
+) -> AccountSchema:
+    account = await account_service.create(
+        AccountCreateSchema(
+            login=body.login, password=body.password, name=body.name, role=Role.USER
+        ),
+        session,
     )
+
+    return AccountSchema.model_validate(account)
 
 
 @accounts_router.post(
@@ -44,10 +47,8 @@ async def create_account(body: AccountCreateSchema) -> AccountSchema:
 
 
 @accounts_router.get("/my", summary="Получение данных своего аккаунта")
-async def get_my_account(
-    user: Annotated[AccountSchema, Depends(authorize_user)],
-) -> AccountSchema:
-    return user
+async def get_my_account(account: AuthorizedUser) -> AccountSchema:
+    return AccountSchema.model_validate(account)
 
 
 @accounts_router.get("/{id}", summary="Получение аккаунт по идентификатору")

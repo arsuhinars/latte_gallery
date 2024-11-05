@@ -3,6 +3,8 @@ services:
     build:
       target: run
       context: .
+    environment:
+      DB_URL: postgresql+psycopg://user:qwerty12@database:5432/latte_gallery
     ports:
       - "8080:8080"
 

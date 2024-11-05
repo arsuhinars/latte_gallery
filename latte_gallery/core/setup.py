@@ -3,7 +3,9 @@ from typing import cast
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from latte_gallery.accounts.repository import AccountRepository
 from latte_gallery.accounts.routers import accounts_router
+from latte_gallery.accounts.services import AccountService
 from latte_gallery.core.db import DatabaseManager
 from latte_gallery.core.routers import status_router
 from latte_gallery.core.settings import AppSettings
@@ -22,15 +24,19 @@ def create_app():
     app.include_router(status_router)
     app.include_router(accounts_router)
 
-    app.state.settings = settings
-    app.state.db_manager = DatabaseManager(settings.db_url)
-
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
         allow_methods=["*"],
         allow_credentials=True,
     )
+
+    app.state.settings = settings
+    app.state.db_manager = DatabaseManager(settings.db_url)
+
+    account_repository = AccountRepository()
+
+    app.state.account_service = AccountService(account_repository)
 
     return app
 

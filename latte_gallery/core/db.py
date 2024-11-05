@@ -18,6 +18,7 @@ class DatabaseManager:
         self._engine = create_async_engine(self._db_url)
         self._session_maker = async_sessionmaker(self._engine)
         async with self._engine.connect() as connect:
+            print("Created tables")
             await connect.run_sync(Base.metadata.create_all)
 
     async def dispose(self):
