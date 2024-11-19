@@ -17,6 +17,7 @@ class DatabaseManager:
 
     async def initialize(self):
         from latte_gallery.accounts.models import Account  # noqa: F401
+        from latte_gallery.pictures.models import Picture  # noqa: F401
 
         self._engine = create_async_engine(self._db_url)
         self._session_maker = async_sessionmaker(

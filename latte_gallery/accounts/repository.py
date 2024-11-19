@@ -24,6 +24,6 @@ class AccountRepository:
     async def find_all(
         self, offset: int, limit: int, session: AsyncSession
     ) -> list[Account]:
-        q = select(Account).offset(offset).limit(limit)
+        q = select(Account).offset(offset).limit(limit).order_by(Account.id)
         s = await session.execute(q)
         return list(s.scalars().all())

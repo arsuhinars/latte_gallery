@@ -10,6 +10,9 @@ from latte_gallery.accounts.services import AccountsCreator, AccountService
 from latte_gallery.core.db import DatabaseManager
 from latte_gallery.core.routers import status_router
 from latte_gallery.core.settings import AppSettings
+from latte_gallery.pictures.repositories import PictureRepository
+from latte_gallery.pictures.routers import pictures_router
+from latte_gallery.pictures.services import PictureService
 from latte_gallery.security.dependencies import authenticate_user
 
 
@@ -24,6 +27,7 @@ def create_app():
 
     app.include_router(status_router)
     app.include_router(accounts_router)
+    app.include_router(pictures_router)
 
     app.add_middleware(
         CORSMiddleware,
@@ -36,11 +40,13 @@ def create_app():
     app.state.db_manager = DatabaseManager(settings.db_url)
 
     account_repository = AccountRepository()
+    picture_repository = PictureRepository()
 
     app.state.account_service = AccountService(account_repository)
     app.state.accounts_creator = AccountsCreator(
         settings.initial_accounts, account_repository, app.state.db_manager
     )
+    app.state.picture_service = PictureService(picture_repository, account_repository)
 
     return app
 

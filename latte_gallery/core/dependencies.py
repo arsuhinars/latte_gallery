@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from latte_gallery.accounts.services import AccountService
 from latte_gallery.core.db import DatabaseManager
+from latte_gallery.pictures.services import PictureService
 
 
 async def session(request: Request):
@@ -17,5 +18,10 @@ def account_service(request: Request):
     return request.app.state.account_service
 
 
+def picture_service(request: Request):
+    return request.app.state.picture_service
+
+
 SessionDep = Annotated[AsyncSession, Depends(session)]
 AccountServiceDep = Annotated[AccountService, Depends(account_service)]
+PictureServiceDep = Annotated[PictureService, Depends(picture_service)]

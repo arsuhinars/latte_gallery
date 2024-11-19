@@ -1,8 +1,12 @@
+import typing
 from enum import StrEnum
 
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from latte_gallery.core.db import Base
+
+if typing.TYPE_CHECKING:
+    from latte_gallery.pictures.models import Picture
 
 
 class Role(StrEnum):
@@ -19,3 +23,5 @@ class Account(Base):
     password: Mapped[str]
     name: Mapped[str]
     role: Mapped[Role]
+
+    pictures: Mapped[list["Picture"]] = relationship(back_populates="owner")
