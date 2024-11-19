@@ -1,0 +1,20 @@
+[
+    {
+        "login": "main_admin",
+        "password": "qwerty12",
+        "name": "Иванов Иван",
+        "role": "MAIN_ADMIN"
+    },
+    {
+        "login": "admin",
+        "password": "qwerty12",
+        "name": "Петров Петр",
+        "role": "ADMIN"
+    },
+    {
+        "login": "user",
+        "password": "qwerty12",
+        "name": "Сидоров Иван",
+        "role": "USER"
+    }
+]

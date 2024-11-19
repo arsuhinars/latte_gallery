@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import status
 from fastapi.exceptions import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -5,7 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from latte_gallery.accounts.models import Account
 from latte_gallery.accounts.repository import AccountRepository
 from latte_gallery.accounts.schemas import AccountCreateSchema, AccountUpdateSchema
+from latte_gallery.core.db import DatabaseManager
 from latte_gallery.core.schemas import Page
+
+logger = logging.getLogger(__name__)
 
 
 class AccountService:
@@ -67,3 +72,33 @@ class AccountService:
         await session.commit()
 
         return account
+
+
+class AccountsCreator:
+    def __init__(
+        self,
+        accounts: list[AccountCreateSchema],
+        repository: AccountRepository,
+        db_manager: DatabaseManager,
+    ):
+        self._accounts = accounts
+        self._repository = repository
+        self._db_manager = db_manager
+
+    async def initialize(self):
+        logger.info("Started creating initial accounts")
+        async with self._db_manager.get_session() as session:
+            for account in self._accounts:
+                a = await self._repository.find_by_login(account.login, session)
+                if a is not None:
+                    logger.info(f"Account with login={account.login} already exists")
+                    continue
+
+                a = Account(**account.model_dump())
+                session.add(a)
+
+            await session.commit()
+        logger.info("Finished creating initial accounts")
+
+    async def dispose(self):
+        pass

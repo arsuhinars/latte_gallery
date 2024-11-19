@@ -1,4 +1,5 @@
-from fastapi import APIRouter, status
+from fastapi import APIRouter, HTTPException, status
+from fastapi.params import Depends
 from pydantic import PositiveInt
 
 from latte_gallery.accounts.schemas import (
@@ -11,7 +12,8 @@ from latte_gallery.accounts.schemas import (
 )
 from latte_gallery.core.dependencies import AccountServiceDep, SessionDep
 from latte_gallery.core.schemas import Page, PageNumber, PageSize
-from latte_gallery.security.dependencies import AuthorizedUser
+from latte_gallery.security.dependencies import AuthenticatedAccount, AuthorizedAccount
+from latte_gallery.security.permissions import Anonymous, Authenticated, IsAdmin
 
 accounts_router = APIRouter(prefix="/accounts", tags=["Аккаунты"])
 
@@ -20,13 +22,17 @@ accounts_router = APIRouter(prefix="/accounts", tags=["Аккаунты"])
     "/register",
     summary="Регистрация нового аккаунта",
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(AuthorizedAccount(Anonymous()))],
 )
 async def register_account(
     body: AccountRegisterSchema, account_service: AccountServiceDep, session: SessionDep
 ) -> AccountSchema:
     account = await account_service.create(
         AccountCreateSchema(
-            login=body.login, password=body.password, name=body.name, role=Role.USER
+            login=body.login,
+            password=body.password,
+            name=body.name,
+            role=Role.USER,
         ),
         session,
     )
@@ -35,19 +41,35 @@ async def register_account(
 
 
 @accounts_router.post(
-    "", summary="Создать новый аккаунт", status_code=status.HTTP_201_CREATED
+    "",
+    summary="Создать новый аккаунт",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(AuthorizedAccount(IsAdmin()))],
 )
-async def create_account(body: AccountCreateSchema) -> AccountSchema:
-    return AccountSchema(
-        id=1,
-        login=body.login,
-        name=body.name,
-        role=body.role,
-    )
+async def create_account(
+    body: AccountCreateSchema,
+    current_user: AuthenticatedAccount,
+    account_service: AccountServiceDep,
+    session: SessionDep,
+) -> AccountSchema:
+    assert current_user is not None
+
+    if (current_user.role == Role.MAIN_ADMIN and body.role == Role.MAIN_ADMIN) or (
+        current_user.role == Role.ADMIN and body.role in {Role.ADMIN, Role.MAIN_ADMIN}
+    ):
+        raise HTTPException(status.HTTP_403_FORBIDDEN)
+
+    account = await account_service.create(body, session)
+
+    return AccountSchema.model_validate(account)
 
 
-@accounts_router.get("/my", summary="Получение данных своего аккаунта")
-async def get_my_account(account: AuthorizedUser) -> AccountSchema:
+@accounts_router.get(
+    "/my",
+    summary="Получение данных своего аккаунта",
+    dependencies=[Depends(AuthorizedAccount(Authenticated()))],
+)
+async def get_my_account(account: AuthenticatedAccount) -> AccountSchema:
     return AccountSchema.model_validate(account)
 
 

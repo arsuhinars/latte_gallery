@@ -7,6 +7,8 @@ services:
       DB_URL: postgresql+psycopg://user:qwerty12@database:5432/latte_gallery
     ports:
       - "8080:8080"
+    volumes:
+      - ./initial_accounts.json:/run/secrets/initial_accounts
 
   database:
     image: postgres:17

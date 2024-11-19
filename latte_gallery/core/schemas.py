@@ -14,6 +14,6 @@ class StatusResponse(BaseModel):
 ItemT = TypeVar("ItemT")
 
 
-class Page(Generic[ItemT], BaseModel):
+class Page(BaseModel, Generic[ItemT]):
     count: int
     items: list[ItemT]
