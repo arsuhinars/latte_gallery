@@ -17,6 +17,6 @@ FROM install AS run
 
 COPY latte_gallery/ latte_gallery/
 
-EXPOSE 8080
+# EXPOSE 8080
 
-ENTRYPOINT [ "sh", "-c", "python -m uvicorn --port 8080 --host 0.0.0.0 latte_gallery.main:app" ]
+ENTRYPOINT [ "sh", "-c", "python -m uvicorn --port $SERVER_PORT --host 0.0.0.0 --root-path $ROOT_PATH latte_gallery.main:app" ]
